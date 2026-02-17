@@ -1,0 +1,1231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Logic Doors: School Hallway</title>
+  <style>
+    :root{
+      --bg1:#0b1020;
+      --bg2:#121a33;
+      --panel:#0f1630cc;
+      --panel2:#0f1630f0;
+      --ink:#e8ecff;
+      --muted:#b8c0e6;
+      --accent:#8ad5ff;
+      --good:#6ef3b3;
+      --bad:#ff7f9e;
+      --warn:#ffd36e;
+      --shadow: 0 12px 35px rgba(0,0,0,.45);
+      --round: 18px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--ink);
+      background:
+        radial-gradient(1200px 600px at 50% 0%, #21306b55, transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    header{
+      padding:18px 18px 8px;
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      justify-content:space-between;
+      max-width:1100px;
+      margin:0 auto;
+    }
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .title h1{
+      margin:0;
+      font-size:22px;
+      letter-spacing:.2px;
+    }
+    .title .sub{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.25;
+      max-width:620px;
+    }
+
+    .hud{
+      display:flex;
+      gap:10px;
+      align-items:stretch;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .pill{
+      background:var(--panel);
+      border:1px solid #ffffff1a;
+      border-radius:999px;
+      padding:10px 12px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      white-space:nowrap;
+    }
+    .pill b{font-weight:700}
+    .pill .dot{
+      width:8px;height:8px;border-radius:50%;
+      background:var(--accent);
+      box-shadow:0 0 14px #8ad5ff88;
+    }
+    .btn{
+      cursor:pointer;
+      border:1px solid #ffffff22;
+      background:linear-gradient(180deg, #1a2550cc, #121a33cc);
+      color:var(--ink);
+      border-radius:999px;
+      padding:10px 12px;
+      font-size:13px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      transition: transform .08s ease, border-color .15s ease, filter .15s ease;
+      user-select:none;
+    }
+    .btn:hover{ filter:brightness(1.08); border-color:#ffffff44; }
+    .btn:active{ transform: translateY(1px); }
+    .btn.warn{ border-color:#ffd36e55; }
+    .btn.danger{ border-color:#ff7f9e55; }
+
+    /* Hallway scene */
+    .scene{
+      max-width:1100px;
+      margin:10px auto 28px;
+      padding:0 18px 24px;
+    }
+    .hallway{
+      position:relative;
+      border-radius: var(--round);
+      border:1px solid #ffffff14;
+      background:
+        radial-gradient(900px 280px at 50% 10%, #8ad5ff22, transparent 55%),
+        linear-gradient(180deg, #0a0f1f, #0c1330 35%, #070b17);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .ceiling-lights{
+      position:absolute; inset:0;
+      pointer-events:none;
+      opacity:.7;
+      background:
+        repeating-linear-gradient(90deg,
+          transparent 0 80px,
+          #ffffff08 80px 81px,
+          transparent 81px 140px
+        );
+      mask-image: linear-gradient(180deg, #000 0 35%, transparent 70%);
+    }
+    .floor{
+      position:absolute; left:0; right:0; bottom:0; height:40%;
+      background:
+        linear-gradient(180deg, transparent, #00000055 20%, #00000088 70%),
+        repeating-linear-gradient(90deg,
+          #ffffff08 0 60px,
+          #ffffff04 60px 62px,
+          #ffffff08 62px 122px
+        );
+      transform: skewX(-8deg);
+      transform-origin: bottom left;
+      opacity:.9;
+      filter: blur(.0px);
+    }
+
+    .hallway-inner{
+      position:relative;
+      padding:18px 18px 22px;
+    }
+
+    .wingbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .wingbar .wing{
+      color:var(--muted);
+      font-size:13px;
+    }
+    .wingbar .progress{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .bar{
+      width:200px;
+      height:8px;
+      border-radius:999px;
+      background:#ffffff12;
+      overflow:hidden;
+      border:1px solid #ffffff14;
+    }
+    .bar > div{
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg, var(--accent), var(--good));
+      box-shadow:0 0 12px #8ad5ff66;
+    }
+
+    .doors{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap:14px;
+    }
+
+    .door{
+      position:relative;
+      border-radius: 16px;
+      border:1px solid #ffffff18;
+      background:
+        linear-gradient(180deg, #1a2550cc, #0f1630cc),
+        radial-gradient(300px 150px at 50% 20%, #8ad5ff18, transparent 55%);
+      box-shadow: 0 10px 25px rgba(0,0,0,.35);
+      overflow:hidden;
+      cursor:pointer;
+      min-height:148px;
+      transition: transform .12s ease, filter .15s ease, border-color .15s ease;
+      user-select:none;
+    }
+    .door:hover{
+      transform: translateY(-2px);
+      filter:brightness(1.06);
+      border-color:#ffffff30;
+    }
+    .door:active{ transform: translateY(-1px); }
+
+    .door.locked::after{
+      content:"";
+      position:absolute; inset:-60px -60px auto auto;
+      width:160px;height:160px;
+      background: radial-gradient(circle at 30% 30%, #ffd36e55, transparent 55%);
+      transform: rotate(25deg);
+      opacity:.55;
+    }
+    .door.unlocked{
+      border-color:#6ef3b355;
+      background:
+        linear-gradient(180deg, #102a2acc, #0f1630cc),
+        radial-gradient(300px 150px at 50% 20%, #6ef3b322, transparent 55%);
+    }
+
+    .door .top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:8px;
+      padding:12px 12px 0;
+    }
+    .door .label{
+      font-size:13px;
+      color:var(--muted);
+    }
+    .badge{
+      font-size:12px;
+      padding:5px 8px;
+      border-radius:999px;
+      border:1px solid #ffffff20;
+      color:var(--muted);
+      background:#00000022;
+      backdrop-filter: blur(6px);
+    }
+    .badge.good{ border-color:#6ef3b366; color:#c9ffe9; }
+    .badge.lock{ border-color:#ffd36e55; color:#ffe8b0; }
+    .badge.dead{ border-color:#ff7f9e55; color:#ffd0dc; }
+
+    .door .mid{
+      padding:10px 12px 12px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .door .title2{
+      font-weight:800;
+      font-size:15px;
+      letter-spacing:.15px;
+    }
+    .door .hint{
+      color:var(--muted);
+      font-size:12.5px;
+      line-height:1.35;
+      min-height:40px;
+    }
+
+    .door .knob{
+      position:absolute;
+      right:12px;
+      bottom:12px;
+      width:14px;height:14px;
+      border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, #fff, #b8c0e6 45%, #2a335a 80%);
+      opacity:.85;
+      box-shadow:0 0 10px rgba(255,255,255,.15);
+    }
+
+    /* Modal */
+    .overlay{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+    .overlay.show{ display:flex; }
+
+    .modal{
+      width:min(980px, 100%);
+      border-radius: 22px;
+      border:1px solid #ffffff22;
+      background: var(--panel2);
+      box-shadow: 0 20px 60px rgba(0,0,0,.6);
+      overflow:hidden;
+      backdrop-filter: blur(10px);
+    }
+    .modal-head{
+      padding:14px 16px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      border-bottom:1px solid #ffffff14;
+      background: linear-gradient(180deg, #1a255055, transparent);
+    }
+    .modal-head .hgroup{
+      display:flex; flex-direction:column; gap:4px;
+    }
+    .modal-head .hgroup .h{
+      font-size:16px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+    .modal-head .hgroup .small{
+      font-size:12.5px; color:var(--muted);
+    }
+    .modal-body{
+      padding:14px 16px 16px;
+      display:grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap:14px;
+    }
+    @media (max-width: 860px){
+      .doors{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .modal-body{ grid-template-columns: 1fr; }
+      .bar{ width:140px; }
+    }
+
+    .card{
+      border-radius: 18px;
+      border:1px solid #ffffff16;
+      background: #00000018;
+      padding:14px;
+    }
+    .argument{
+      font-size:15px;
+      line-height:1.45;
+      color:var(--ink);
+      white-space:pre-wrap;
+    }
+    .meta{
+      margin-top:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      color:var(--muted);
+      font-size:12.5px;
+    }
+    .meta .tag{
+      padding:5px 8px;
+      border-radius:999px;
+      border:1px solid #ffffff16;
+      background:#00000018;
+    }
+
+    .options{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .opt{
+      text-align:left;
+      border-radius: 16px;
+      border:1px solid #ffffff18;
+      background: linear-gradient(180deg, #182047aa, #0f1630aa);
+      padding:12px 12px;
+      color:var(--ink);
+      cursor:pointer;
+      transition: transform .08s ease, filter .15s ease, border-color .15s ease;
+      box-shadow: 0 8px 22px rgba(0,0,0,.28);
+    }
+    .opt:hover{ filter:brightness(1.06); border-color:#ffffff32; }
+    .opt:active{ transform: translateY(1px); }
+    .opt.good{ border-color:#6ef3b377; background: linear-gradient(180deg, #102a2acc, #0f1630aa); }
+    .opt.bad{ border-color:#ff7f9e77; background: linear-gradient(180deg, #3b1730cc, #0f1630aa); }
+
+    .feedback{
+      margin-top:10px;
+      border-radius: 16px;
+      border:1px solid #ffffff16;
+      padding:12px;
+      background:#00000022;
+      min-height:72px;
+    }
+    .feedback .line1{
+      font-weight:900;
+      letter-spacing:.15px;
+      margin-bottom:6px;
+    }
+    .feedback .line1.good{ color:#c9ffe9; }
+    .feedback .line1.bad{ color:#ffd0dc; }
+    .feedback .ex{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      white-space:pre-wrap;
+    }
+
+    .modal-foot{
+      padding:12px 16px;
+      border-top:1px solid #ffffff14;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      background: linear-gradient(0deg, #1a255055, transparent);
+    }
+    .foot-left{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .kbd{
+      font-size:12px;
+      color:var(--muted);
+      border:1px solid #ffffff18;
+      padding:4px 8px;
+      border-radius:10px;
+      background:#0000001f;
+    }
+
+    .hintbox{
+      display:none;
+      margin-top:10px;
+      border-radius: 14px;
+      border:1px dashed #8ad5ff55;
+      padding:10px;
+      color:#d8f1ff;
+      background:#0b1b2a55;
+      font-size:13px;
+      line-height:1.35;
+      white-space:pre-wrap;
+    }
+    .hintbox.show{ display:block; }
+
+    .tiny{
+      font-size:12px;color:var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="title">
+      <h1>Logic Doors: School Hallway</h1>
+      <div class="sub">
+        Click a door. Read the prose argument. Choose the deductive form (or identify the fallacy).
+        Unlock the corridor one door at a time.
+      </div>
+    </div>
+
+    <div class="hud">
+      <div class="pill"><span class="dot"></span> Score: <b id="score">0</b></div>
+      <div class="pill"><span class="dot"></span> Streak: <b id="streak">0</b></div>
+      <div class="pill"><span class="dot"></span> Unlocked: <b id="unlocked">0</b>/<span id="total">0</span></div>
+      <button class="btn warn" id="resetBtn" title="Clear progress and start again">Reset</button>
+      <button class="btn" id="shuffleBtn" title="Re-roll the current wing's doors">New Wing</button>
+    </div>
+  </header>
+
+  <div class="scene">
+    <div class="hallway">
+      <div class="ceiling-lights"></div>
+      <div class="floor"></div>
+
+      <div class="hallway-inner">
+        <div class="wingbar">
+          <div class="wing">
+            <b id="wingName">Wing A</b> · <span id="wingBlurb">After-school corridor. Fluorescent lights. Eight doors.</span>
+          </div>
+          <div class="progress">
+            <span>Progress</span>
+            <div class="bar" aria-hidden="true"><div id="progFill"></div></div>
+            <span id="progText">0%</span>
+          </div>
+        </div>
+
+        <div class="doors" id="doors"></div>
+
+        <div class="tiny" style="margin-top:10px;">
+          Tip: Use <span class="kbd">Esc</span> to close a door. Your progress saves automatically on this device.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="hgroup">
+          <div class="h" id="modalTitle">Door</div>
+          <div class="small" id="modalSub">Choose the matching form.</div>
+        </div>
+        <button class="btn danger" id="closeBtn">Close</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="card">
+          <div class="argument" id="argumentText"></div>
+          <div class="meta" id="metaTags"></div>
+          <div class="hintbox" id="hintBox"></div>
+          <div class="feedback" id="feedback">
+            <div class="line1" id="fbLine1"> </div>
+            <div class="ex" id="fbEx">Pick a form to unlock the door.</div>
+          </div>
+        </div>
+
+        <div class="options">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+              <div style="font-weight:900;letter-spacing:.15px;">Forms</div>
+              <button class="btn" id="hintBtn" title="Show the abstract template">Hint</button>
+            </div>
+            <div class="tiny" style="margin:8px 0 10px;">
+              Choose the best match. Some arguments are <i>valid</i> forms; some are <i>formal fallacies</i>.
+            </div>
+            <div id="options"></div>
+          </div>
+
+          <div class="card">
+            <div style="font-weight:900;margin-bottom:6px;">Controls</div>
+            <div class="tiny">
+              • <b>Hint</b> shows the abstract template (e.g. (P ⊃ Q) &amp; ~Q ∴ ~P).<br/>
+              • <b>New Wing</b> re-rolls the 8 doors, keeping your overall progress.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <div class="foot-left">
+          <span class="kbd">Esc</span> close
+          <span class="kbd">Hint</span> template
+          <span class="kbd">Reset</span> clear progress
+        </div>
+        <div class="tiny" id="doorStatus"> </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================
+    // TEACHER EDIT ZONE
+    // - Add more questions to QUESTION_BANK below.
+    // - Each question needs:
+    //   id, text, answer, hint, explanation, difficulty, tags
+    // - "answer" must match one of FORMS' keys.
+    // =========================================================
+
+    const FORMS = [
+      { key: "MP", name: "Modus Ponens", short: "MP", type: "valid" },
+      { key: "MT", name: "Modus Tollens", short: "MT", type: "valid" },
+      { key: "HS", name: "Hypothetical Syllogism", short: "HS", type: "valid" },
+      { key: "DS", name: "Disjunctive Syllogism", short: "DS", type: "valid" },
+      { key: "CD", name: "Constructive Dilemma", short: "CD", type: "valid" },
+      { key: "AC", name: "Affirming the Consequent", short: "AC", type: "fallacy" },
+      { key: "DA", name: "Denying the Antecedent", short: "DA", type: "fallacy" },
+    ];
+
+    // A small pool of hallway blurbs to keep it lively
+    const WINGS = [
+      { name: "Wing A", blurb: "After-school corridor. Fluorescent lights. Eight doors." },
+      { name: "Wing B", blurb: "Quiet hallway near the library. The carpet muffles footsteps." },
+      { name: "Wing C", blurb: "Science block corridor. Posters everywhere. The smell of whiteboard markers." },
+      { name: "Wing D", blurb: "Administration wing. Everything feels strangely official." },
+      { name: "Wing E", blurb: "Music corridor. Someone’s practising scales behind a door." },
+    ];
+
+    const QUESTION_BANK = [
+      // MP
+      {
+        id: "q1",
+        text: "If the bell has rung, then class is over.\nThe bell has rung.\nTherefore, class is over.",
+        answer: "MP",
+        hint: "(P ⊃ Q) & P ∴ Q",
+        explanation: "(P ⊃ Q) & P ∴ Q\nValid: the antecedent is affirmed, so the consequent follows.",
+        difficulty: 1,
+        tags: ["school", "clean"]
+      },
+      {
+        id: "q2",
+        text: "If a student submits the draft on time, then they get feedback.\nAmira submitted the draft on time.\nSo Amira will get feedback.",
+        answer: "MP",
+        hint: "(P ⊃ Q) & P ∴ Q",
+        explanation: "(P ⊃ Q) & P ∴ Q\nValid: modus ponens.",
+        difficulty: 1,
+        tags: ["assessment", "names"]
+      },
+      {
+        id: "q3",
+        text: "If the printer is out of paper, then it won’t print.\nIt is out of paper.\nSo it won’t print.",
+        answer: "MP",
+        hint: "(P ⊃ Q) & P ∴ Q",
+        explanation: "(P ⊃ Q) & P ∴ Q\nValid: MP.",
+        difficulty: 1,
+        tags: ["tech", "clean"]
+      },
+
+      // MT
+      {
+        id: "q4",
+        text: "If a student is present, then they sign the roll.\nThe roll is not signed.\nTherefore, the student is not present.",
+        answer: "MT",
+        hint: "(P ⊃ Q) & ~Q ∴ ~P",
+        explanation: "(P ⊃ Q) & ~Q ∴ ~P\nValid: we deny the consequent, so we may deny the antecedent.",
+        difficulty: 2,
+        tags: ["school", "negation"]
+      },
+      {
+        id: "q5",
+        text: "If the fire alarm is working, then it will sound during the test.\nIt did not sound during the test.\nSo the fire alarm is not working.",
+        answer: "MT",
+        hint: "(P ⊃ Q) & ~Q ∴ ~P",
+        explanation: "(P ⊃ Q) & ~Q ∴ ~P\nValid: MT (assuming the conditional is correct).",
+        difficulty: 2,
+        tags: ["safety", "negation"]
+      },
+      {
+        id: "q6",
+        text: "If you remembered your laptop charger, then your laptop won’t die.\nYour laptop died.\nSo you didn’t remember your charger.",
+        answer: "MT",
+        hint: "(P ⊃ Q) & ~Q ∴ ~P",
+        explanation: "(P ⊃ Q) & ~Q ∴ ~P\nValid: MT (note: 'laptop died' is ~Q).",
+        difficulty: 3,
+        tags: ["tech", "everyday", "negation"]
+      },
+
+      // HS
+      {
+        id: "q7",
+        text: "If you revise, then you understand the topic.\nIf you understand the topic, then you do well on the quiz.\nTherefore, if you revise, then you do well on the quiz.",
+        answer: "HS",
+        hint: "(P ⊃ Q) & (Q ⊃ R) ∴ (P ⊃ R)",
+        explanation: "(P ⊃ Q) & (Q ⊃ R) ∴ (P ⊃ R)\nValid: HS chains two conditionals.",
+        difficulty: 2,
+        tags: ["study", "conditionals"]
+      },
+      {
+        id: "q8",
+        text: "If the timetable changes, then the room changes.\nIf the room changes, then the seating plan changes.\nSo if the timetable changes, then the seating plan changes.",
+        answer: "HS",
+        hint: "(P ⊃ Q) & (Q ⊃ R) ∴ (P ⊃ R)",
+        explanation: "(P ⊃ Q) & (Q ⊃ R) ∴ (P ⊃ R)\nValid: HS.",
+        difficulty: 2,
+        tags: ["school", "admin"]
+      },
+      {
+        id: "q9",
+        text: "If the school Wi-Fi is down, then the online roll won’t load.\nIf the online roll won’t load, then we use paper rolls.\nTherefore, if the school Wi-Fi is down, then we use paper rolls.",
+        answer: "HS",
+        hint: "(P ⊃ Q) & (Q ⊃ R) ∴ (P ⊃ R)",
+        explanation: "(P ⊃ Q) & (Q ⊃ R) ∴ (P ⊃ R)\nValid: HS.",
+        difficulty: 3,
+        tags: ["tech", "school"]
+      },
+
+      // DS
+      {
+        id: "q10",
+        text: "Either the excursion permission slips are in the tray or they’re in the office.\nThey are not in the tray.\nSo they’re in the office.",
+        answer: "DS",
+        hint: "(P ∨ Q) & ~P ∴ Q",
+        explanation: "(P ∨ Q) & ~P ∴ Q\nValid: DS (inclusive ∨ is fine here).",
+        difficulty: 2,
+        tags: ["school", "disjunction", "negation"]
+      },
+      {
+        id: "q11",
+        text: "Either the projector cable is loose or the projector itself is broken.\nThe cable is not loose.\nTherefore, the projector is broken.",
+        answer: "DS",
+        hint: "(P ∨ Q) & ~P ∴ Q",
+        explanation: "(P ∨ Q) & ~P ∴ Q\nValid: DS.",
+        difficulty: 3,
+        tags: ["tech", "disjunction"]
+      },
+      {
+        id: "q12",
+        text: "Either the door code has changed or I typed it incorrectly.\nThe code has not changed.\nSo I typed it incorrectly.",
+        answer: "DS",
+        hint: "(P ∨ Q) & ~P ∴ Q",
+        explanation: "(P ∨ Q) & ~P ∴ Q\nValid: DS.",
+        difficulty: 3,
+        tags: ["school", "everyday"]
+      },
+
+      // CD
+      {
+        id: "q13",
+        text: "If we have an assembly, then period 1 is shortened.\nIf there’s a staff meeting, then period 1 is shortened.\nEither we have an assembly or there’s a staff meeting.\nTherefore, period 1 is shortened.",
+        answer: "CD",
+        hint: "(P ⊃ R) & (Q ⊃ R) & (P ∨ Q) ∴ R",
+        explanation: "(P ⊃ R) & (Q ⊃ R) & (P ∨ Q) ∴ R\nValid: constructive dilemma (same consequent).",
+        difficulty: 3,
+        tags: ["school", "disjunction", "conditionals"]
+      },
+      {
+        id: "q14",
+        text: "If the class is noisy, then I move you to a new seating plan.\nIf the class is off-task, then I move you to a new seating plan.\nEither the class is noisy or the class is off-task.\nSo I will move you to a new seating plan.",
+        answer: "CD",
+        hint: "(P ⊃ R) & (Q ⊃ R) & (P ∨ Q) ∴ R",
+        explanation: "(P ⊃ R) & (Q ⊃ R) & (P ∨ Q) ∴ R\nValid: CD.",
+        difficulty: 2,
+        tags: ["classroom", "disjunction"]
+      },
+      {
+        id: "q15",
+        text: "If the buses are late, then students arrive late.\nIf it’s pouring rain, then students arrive late.\nEither the buses are late or it’s pouring rain.\nTherefore, students arrive late.",
+        answer: "CD",
+        hint: "(P ⊃ R) & (Q ⊃ R) & (P ∨ Q) ∴ R",
+        explanation: "(P ⊃ R) & (Q ⊃ R) & (P ∨ Q) ∴ R\nValid: CD.",
+        difficulty: 2,
+        tags: ["everyday", "weather"]
+      },
+
+      // AC fallacy
+      {
+        id: "q16",
+        text: "If someone is a teacher, then they work at a school.\nJordan works at a school.\nTherefore, Jordan is a teacher.",
+        answer: "AC",
+        hint: "(P ⊃ Q) & Q ∴ P",
+        explanation: "(P ⊃ Q) & Q ∴ P\nFallacy: affirming the consequent. Working at a school doesn’t guarantee being a teacher.",
+        difficulty: 1,
+        tags: ["fallacy", "clean"]
+      },
+      {
+        id: "q17",
+        text: "If the homework is copied, then the answers match perfectly.\nThe answers match perfectly.\nSo the homework was copied.",
+        answer: "AC",
+        hint: "(P ⊃ Q) & Q ∴ P",
+        explanation: "(P ⊃ Q) & Q ∴ P\nFallacy: AC. Perfect matches could occur for other reasons (e.g. a worked example shared by the teacher).",
+        difficulty: 3,
+        tags: ["assessment", "fallacy"]
+      },
+      {
+        id: "q18",
+        text: "If the student understands logic, then they can identify modus tollens.\nThey can identify modus tollens.\nTherefore, they understand logic.",
+        answer: "AC",
+        hint: "(P ⊃ Q) & Q ∴ P",
+        explanation: "(P ⊃ Q) & Q ∴ P\nFallacy: AC. Identifying MT might be possible without broad understanding.",
+        difficulty: 2,
+        tags: ["logic", "fallacy"]
+      },
+
+      // DA fallacy
+      {
+        id: "q19",
+        text: "If the student studied, then they passed.\nThe student did not study.\nTherefore, they did not pass.",
+        answer: "DA",
+        hint: "(P ⊃ Q) & ~P ∴ ~Q",
+        explanation: "(P ⊃ Q) & ~P ∴ ~Q\nFallacy: denying the antecedent. They might pass for other reasons.",
+        difficulty: 1,
+        tags: ["fallacy", "negation"]
+      },
+      {
+        id: "q20",
+        text: "If the library is open, then I can print.\nThe library is not open.\nSo I can’t print.",
+        answer: "DA",
+        hint: "(P ⊃ Q) & ~P ∴ ~Q",
+        explanation: "(P ⊃ Q) & ~P ∴ ~Q\nFallacy: DA. Printing might be available elsewhere.",
+        difficulty: 2,
+        tags: ["school", "fallacy"]
+      },
+      {
+        id: "q21",
+        text: "If it is Friday, then we have sport.\nIt is not Friday.\nTherefore, we do not have sport.",
+        answer: "DA",
+        hint: "(P ⊃ Q) & ~P ∴ ~Q",
+        explanation: "(P ⊃ Q) & ~P ∴ ~Q\nFallacy: DA. Sport could occur on other days.",
+        difficulty: 1,
+        tags: ["school", "fallacy"]
+      },
+
+      // More mixed / slightly messier prose
+      {
+        id: "q22",
+        text: "If the roll isn’t marked, then the attendance office will call.\nThey didn’t call.\nSo the roll must have been marked.",
+        answer: "MT",
+        hint: "(P ⊃ Q) & ~Q ∴ ~P",
+        explanation: "(P ⊃ Q) & ~Q ∴ ~P\nValid: MT. Let P = 'roll isn’t marked', Q = 'office will call'.",
+        difficulty: 3,
+        tags: ["negation", "messy"]
+      },
+      {
+        id: "q23",
+        text: "Either the lesson is in Room 14 or it’s in the drama studio.\nIt’s not in Room 14.\nSo it’s in the drama studio.",
+        answer: "DS",
+        hint: "(P ∨ Q) & ~P ∴ Q",
+        explanation: "(P ∨ Q) & ~P ∴ Q\nValid: DS.",
+        difficulty: 1,
+        tags: ["school", "disjunction"]
+      },
+      {
+        id: "q24",
+        text: "If we run out of time, then we skip the extension questions.\nWe didn’t skip the extension questions.\nSo we didn’t run out of time.",
+        answer: "MT",
+        hint: "(P ⊃ Q) & ~Q ∴ ~P",
+        explanation: "(P ⊃ Q) & ~Q ∴ ~P\nValid: MT.",
+        difficulty: 2,
+        tags: ["classroom", "negation"]
+      },
+      {
+        id: "q25",
+        text: "If the email bounced, then the address was wrong.\nThe address was wrong.\nTherefore, the email bounced.",
+        answer: "AC",
+        hint: "(P ⊃ Q) & Q ∴ P",
+        explanation: "(P ⊃ Q) & Q ∴ P\nFallacy: AC. The address might be wrong without the email having bounced (e.g. it hasn’t been sent yet).",
+        difficulty: 3,
+        tags: ["tech", "fallacy"]
+      },
+      {
+        id: "q26",
+        text: "If a student is on the excursion list, then they submitted the form.\nThey are not on the excursion list.\nSo they did not submit the form.",
+        answer: "DA",
+        hint: "(P ⊃ Q) & ~P ∴ ~Q",
+        explanation: "(P ⊃ Q) & ~P ∴ ~Q\nFallacy: DA. They might have submitted it but not been added yet (or removed).",
+        difficulty: 3,
+        tags: ["admin", "fallacy"]
+      },
+      {
+        id: "q27",
+        text: "If you finish the warm-up, then you start the worksheet.\nIf you start the worksheet, then you attempt question 1.\nSo if you finish the warm-up, then you attempt question 1.",
+        answer: "HS",
+        hint: "(P ⊃ Q) & (Q ⊃ R) ∴ (P ⊃ R)",
+        explanation: "(P ⊃ Q) & (Q ⊃ R) ∴ (P ⊃ R)\nValid: HS.",
+        difficulty: 1,
+        tags: ["classroom", "conditionals"]
+      },
+      {
+        id: "q28",
+        text: "If the photocopier is jammed, then we’ll be late to class.\nThe photocopier is not jammed.\nSo we won’t be late to class.",
+        answer: "DA",
+        hint: "(P ⊃ Q) & ~P ∴ ~Q",
+        explanation: "(P ⊃ Q) & ~P ∴ ~Q\nFallacy: DA. You can be late for lots of reasons.",
+        difficulty: 1,
+        tags: ["everyday", "fallacy"]
+      },
+      {
+        id: "q29",
+        text: "If the canteen runs out of sandwiches, then the Year 10s complain.\nThe Year 10s did not complain.\nSo the canteen did not run out of sandwiches.",
+        answer: "MT",
+        hint: "(P ⊃ Q) & ~Q ∴ ~P",
+        explanation: "(P ⊃ Q) & ~Q ∴ ~P\nValid: MT (again, assuming the conditional is true).",
+        difficulty: 2,
+        tags: ["school", "negation"]
+      },
+      {
+        id: "q30",
+        text: "If there’s a surprise drill, then the timetable is interrupted.\nIf there’s a guest speaker, then the timetable is interrupted.\nEither there’s a surprise drill or there’s a guest speaker.\nTherefore, the timetable is interrupted.",
+        answer: "CD",
+        hint: "(P ⊃ R) & (Q ⊃ R) & (P ∨ Q) ∴ R",
+        explanation: "(P ⊃ R) & (Q ⊃ R) & (P ∨ Q) ∴ R\nValid: constructive dilemma.",
+        difficulty: 3,
+        tags: ["school", "disjunction"]
+      },
+    ];
+
+    // =========================================================
+    // GAME ENGINE
+    // =========================================================
+
+    const STORAGE_KEY = "logicDoors_v1";
+    const TOTAL_DOORS = 8;
+
+    const els = {
+      score: document.getElementById("score"),
+      streak: document.getElementById("streak"),
+      unlocked: document.getElementById("unlocked"),
+      total: document.getElementById("total"),
+      progFill: document.getElementById("progFill"),
+      progText: document.getElementById("progText"),
+      wingName: document.getElementById("wingName"),
+      wingBlurb: document.getElementById("wingBlurb"),
+      doors: document.getElementById("doors"),
+
+      overlay: document.getElementById("overlay"),
+      closeBtn: document.getElementById("closeBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+      shuffleBtn: document.getElementById("shuffleBtn"),
+
+      modalTitle: document.getElementById("modalTitle"),
+      modalSub: document.getElementById("modalSub"),
+      argumentText: document.getElementById("argumentText"),
+      metaTags: document.getElementById("metaTags"),
+      hintBtn: document.getElementById("hintBtn"),
+      hintBox: document.getElementById("hintBox"),
+      options: document.getElementById("options"),
+      fbLine1: document.getElementById("fbLine1"),
+      fbEx: document.getElementById("fbEx"),
+      feedback: document.getElementById("feedback"),
+      doorStatus: document.getElementById("doorStatus"),
+    };
+
+    function shuffle(arr){
+      const a = arr.slice();
+      for(let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i],a[j]] = [a[j],a[i]];
+      }
+      return a;
+    }
+
+    function pickWing(index){
+      return WINGS[index % WINGS.length];
+    }
+
+    function defaultState(){
+      return {
+        wingIndex: 0,
+        // unlockedDoorIds: array of question ids unlocked ever
+        unlockedDoorIds: [],
+        score: 0,
+        streak: 0,
+        attempts: 0,
+        // currentDoors: the 8 question ids currently assigned to doors (re-rolled by "New Wing")
+        currentDoors: [],
+        // record of door-specific: {doorIdx: questionId}
+      };
+    }
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return defaultState();
+        const parsed = JSON.parse(raw);
+        return { ...defaultState(), ...parsed };
+      }catch{
+        return defaultState();
+      }
+    }
+    function saveState(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function getQuestionById(id){
+      return QUESTION_BANK.find(q => q.id === id) || null;
+    }
+
+    function availableQuestionIds(){
+      return QUESTION_BANK.map(q => q.id);
+    }
+
+    function rerollWing(){
+      const ids = availableQuestionIds();
+      const pool = shuffle(ids);
+      state.currentDoors = pool.slice(0, TOTAL_DOORS);
+      state.wingIndex = (state.wingIndex + 1) % WINGS.length;
+      saveState();
+      render();
+    }
+
+    function ensureDoors(){
+      if(!state.currentDoors || state.currentDoors.length !== TOTAL_DOORS){
+        const ids = shuffle(availableQuestionIds());
+        state.currentDoors = ids.slice(0, TOTAL_DOORS);
+      }
+    }
+
+    function unlockedCountInCurrentWing(){
+      const set = new Set(state.unlockedDoorIds);
+      return state.currentDoors.filter(id => set.has(id)).length;
+    }
+
+    function overallUnlockedCount(){
+      return state.unlockedDoorIds.length;
+    }
+
+    function setHud(){
+      els.score.textContent = String(state.score);
+      els.streak.textContent = String(state.streak);
+      els.unlocked.textContent = String(overallUnlockedCount());
+      els.total.textContent = String(QUESTION_BANK.length);
+
+      const wingUnlocked = unlockedCountInCurrentWing();
+      const pct = Math.round((wingUnlocked / TOTAL_DOORS) * 100);
+      els.progFill.style.width = pct + "%";
+      els.progText.textContent = pct + "%";
+
+      const wing = pickWing(state.wingIndex);
+      els.wingName.textContent = wing.name;
+      els.wingBlurb.textContent = wing.blurb;
+    }
+
+    function doorCard(doorIdx, qId){
+      const q = getQuestionById(qId);
+      const isUnlocked = state.unlockedDoorIds.includes(qId);
+      const statusBadge = isUnlocked
+        ? `<span class="badge good">Unlocked</span>`
+        : `<span class="badge lock">Locked</span>`;
+
+      const difficulty = q ? "★".repeat(q.difficulty) : "";
+      const hint = q ? q.text.split("\n")[0] : "—";
+      const title = `Door ${doorIdx+1}`;
+
+      const cls = "door " + (isUnlocked ? "unlocked" : "locked");
+      const snippet = q ? hint : "Missing question data.";
+      const tag = q ? `${q.answer}` : "?";
+
+      return `
+        <div class="${cls}" data-door="${doorIdx}">
+          <div class="top">
+            <div class="label">${title}</div>
+            ${statusBadge}
+          </div>
+          <div class="mid">
+            <div class="title2">${difficulty || "★"}</div>
+            <div class="hint">${escapeHtml(snippet)}</div>
+            <div class="meta" style="margin:0;">
+              <span class="badge">${tag}</span>
+              <span class="badge">${q?.tags?.[0] ?? "logic"}</span>
+            </div>
+          </div>
+          <div class="knob"></div>
+        </div>
+      `;
+    }
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;");
+    }
+
+    // Modal state
+    let state = loadState();
+    ensureDoors();
+
+    let currentDoorIdx = null;
+    let currentQuestion = null;
+    let answeredThisOpen = false;
+
+    function openDoor(doorIdx){
+      currentDoorIdx = doorIdx;
+      const qId = state.currentDoors[doorIdx];
+      const q = getQuestionById(qId);
+      if(!q){
+        alert("Question not found. Try New Wing.");
+        return;
+      }
+      currentQuestion = q;
+      answeredThisOpen = false;
+
+      els.modalTitle.textContent = `Door ${doorIdx+1} · ${pickWing(state.wingIndex).name}`;
+      els.modalSub.textContent = "Match the prose argument to a deductive form (or identify the fallacy).";
+      els.argumentText.textContent = q.text;
+
+      // Tags
+      els.metaTags.innerHTML = "";
+      const tags = [
+        {label: `Difficulty ${q.difficulty}/5`},
+        {label: `Answer set: mixed`},
+        ...(q.tags || []).map(t => ({label:t}))
+      ];
+      tags.forEach(t=>{
+        const span = document.createElement("span");
+        span.className = "tag";
+        span.textContent = t.label;
+        els.metaTags.appendChild(span);
+      });
+
+      // Hint hidden initially
+      els.hintBox.classList.remove("show");
+      els.hintBox.textContent = q.hint;
+
+      // Feedback
+      setFeedbackNeutral();
+
+      // Options
+      renderOptions();
+
+      // Status line
+      const isUnlocked = state.unlockedDoorIds.includes(q.id);
+      els.doorStatus.textContent = isUnlocked
+        ? "This door is already unlocked. You can still practise."
+        : "This door is locked. Choose correctly to unlock it.";
+
+      els.overlay.classList.add("show");
+    }
+
+    function closeDoor(){
+      els.overlay.classList.remove("show");
+      currentDoorIdx = null;
+      currentQuestion = null;
+      answeredThisOpen = false;
+    }
+
+    function setFeedbackNeutral(){
+      els.fbLine1.textContent = "";
+      els.fbLine1.classList.remove("good","bad");
+      els.fbEx.textContent = "Pick a form to unlock the door.";
+      // reset option styles later when rendering
+    }
+
+    function setFeedback(correct){
+      if(correct){
+        els.fbLine1.textContent = "Correct — door unlocked.";
+        els.fbLine1.classList.add("good");
+        els.fbLine1.classList.remove("bad");
+      }else{
+        els.fbLine1.textContent = "Not quite — try again.";
+        els.fbLine1.classList.add("bad");
+        els.fbLine1.classList.remove("good");
+      }
+      els.fbEx.textContent = currentQuestion.explanation;
+    }
+
+    function renderOptions(){
+      const forms = shuffle(FORMS); // keep it fresh
+      els.options.innerHTML = "";
+      forms.forEach(f=>{
+        const btn = document.createElement("button");
+        btn.className = "opt";
+        btn.type = "button";
+        btn.dataset.key = f.key;
+        btn.innerHTML = `<b>${f.name}</b> <span class="tiny">(${f.short}${f.type==="fallacy" ? ", fallacy" : ""})</span>`;
+        btn.addEventListener("click", ()=> chooseForm(f.key, btn));
+        els.options.appendChild(btn);
+      });
+    }
+
+    function chooseForm(key, btnEl){
+      if(!currentQuestion) return;
+
+      state.attempts += 1;
+
+      const isCorrect = key === currentQuestion.answer;
+      setFeedback(isCorrect);
+
+      // Style choices
+      const all = Array.from(els.options.querySelectorAll(".opt"));
+      all.forEach(b => b.classList.remove("good","bad"));
+
+      // mark chosen
+      btnEl.classList.add(isCorrect ? "good" : "bad");
+
+      // mark correct (if wrong, lightly show correct after first attempt in this open)
+      if(!isCorrect){
+        const correctBtn = all.find(b => b.dataset.key === currentQuestion.answer);
+        if(correctBtn) correctBtn.classList.add("good");
+      }
+
+      // Update scoring only once per door-open correct solve (so spamming doesn't inflate)
+      if(isCorrect){
+        // Unlock if not unlocked yet
+        const wasUnlocked = state.unlockedDoorIds.includes(currentQuestion.id);
+        if(!wasUnlocked){
+          state.unlockedDoorIds.push(currentQuestion.id);
+          // score: base + streak bonus + difficulty
+          const base = 10;
+          const diff = currentQuestion.difficulty * 2;
+          const bonus = Math.min(state.streak, 8) * 2;
+          state.score += base + diff + bonus;
+        }else{
+          // practice correct: small points
+          state.score += 2;
+        }
+        state.streak += 1;
+      }else{
+        state.streak = 0;
+      }
+
+      saveState();
+      setHud();
+      renderDoors(); // door visuals update if newly unlocked
+      answeredThisOpen = true;
+    }
+
+    function renderDoors(){
+      els.doors.innerHTML = "";
+      state.currentDoors.forEach((qId, idx)=>{
+        els.doors.insertAdjacentHTML("beforeend", doorCard(idx, qId));
+      });
+
+      // wire click
+      Array.from(els.doors.querySelectorAll(".door")).forEach(d=>{
+        d.addEventListener("click", ()=>{
+          const idx = Number(d.dataset.door);
+          openDoor(idx);
+        });
+      });
+    }
+
+    function render(){
+      ensureDoors();
+      setHud();
+      renderDoors();
+    }
+
+    // Controls
+    els.closeBtn.addEventListener("click", closeDoor);
+    els.overlay.addEventListener("click", (e)=>{
+      if(e.target === els.overlay) closeDoor();
+    });
+    document.addEventListener("keydown", (e)=>{
+      if(e.key === "Escape" && els.overlay.classList.contains("show")) closeDoor();
+    });
+
+    els.hintBtn.addEventListener("click", ()=>{
+      if(!currentQuestion) return;
+      els.hintBox.classList.toggle("show");
+    });
+
+    els.shuffleBtn.addEventListener("click", ()=>{
+      rerollWing();
+    });
+
+    els.resetBtn.addEventListener("click", ()=>{
+      const ok = confirm("Reset all progress on this device?");
+      if(!ok) return;
+      state = defaultState();
+      ensureDoors();
+      saveState();
+      render();
+      closeDoor();
+    });
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
